@@ -4,7 +4,9 @@ function signal = getLivingImageSignal_growthExp(baseDir,numROI,varName)
 % column 1 contains bacteria inoculate date,
 % column 2 contains replicate ID,
 % column 3 contains signal readout,
-% column 4 contains the age of bacteria (days of inoculation on solid media).
+% column 4 contains the age of bacteria (days since inoculation on solid media),
+% column 5 contains the corresponding row indedx of the metadata file,
+% column 6 contains the corresponding ROI number from the metadata file.
 
 % INPUTS:
 % baseDir: string, path to base directory.
@@ -12,13 +14,21 @@ function signal = getLivingImageSignal_growthExp(baseDir,numROI,varName)
 % varName: string, the variable name associated with the measurement files. Use 'AvgRadiance_p_s_cm__sr_' % or 'TotalFlux_p_s_'.
 
 % OUTPUT:
-% signal: Nx4 matrix, double precision.
+% signal: Nx6 matrix, double precision.
 
 %% prep work 
 % load metadata 
 metadata = readtable([baseDir 'metadata_IVIS_growthExp.xls']);
+% check that imageNumber column of metadata is in ascending order (because
+% this is manually pasted into the metadata file so errors may occur)
+imageNumberSorted = sort(metadata.imageNumber);
+if ~isequal(imageNumberSorted,metadata.imageNumber)
+    warning('ImageNumbers are not in ascending order. Errors during manual entry into the metadata file.')
+end
+
 % initialise signal matrix (each row is a plate, each column is number of days since inoculation)
-signal = NaN(numROI*size(metadata,1),4); 
+numSignalCols = 6;
+signal = NaN(numROI*size(metadata,1),numSignalCols); 
 
 %% extract metadata info and signal
 % go through each row of metadata
@@ -47,12 +57,15 @@ for imageCtr = 1:size(metadata,1)
             cellfun(@(x) strcmp(x, imageNumber), mSignalTable.ImageNumber));
             % write signal value into the third column
             signal(signalRowIdx,3) = mSignalTable.(varName)(mRowIdx);
-            % write the age of the bacteria (i.e. days of inoculation) into the fourth column
+            % write the age of the bacteria (i.e. days since inoculation) into the fourth column
             signal(signalRowIdx,4) = datenum(num2str(expDate),'yyyymmdd')- datenum(num2str(bacDate),'yyyymmdd');
+            % keep track of the row and ROI index from metadata file
+            signal(signalRowIdx,5) = imageCtr;
+            signal(signalRowIdx,6) = ROICtr;
         end
     end
 end
 
 %% remove NaN entries from signal matrix
 signal = signal(~isnan(signal));
-signal = reshape(signal,numel(signal)/4,4);
+signal = reshape(signal,numel(signal)/numSignalCols,numSignalCols);
