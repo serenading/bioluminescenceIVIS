@@ -7,6 +7,7 @@ function signal = getLivingImageSignal_growthExp(baseDir,numROI,varName)
 % column 4 contains the age of bacteria (days since inoculation on solid media),
 % column 5 contains the corresponding row indedx of the metadata file,
 % column 6 contains the corresponding ROI number from the metadata file.
+% column 7 contains the correspoinding experimental date from the metadata file.
 
 % INPUTS:
 % baseDir: string, path to base directory.
@@ -14,7 +15,7 @@ function signal = getLivingImageSignal_growthExp(baseDir,numROI,varName)
 % varName: string, the variable name associated with the measurement files. Use 'AvgRadiance_p_s_cm__sr_' % or 'TotalFlux_p_s_'.
 
 % OUTPUT:
-% signal: Nx6 matrix, double precision.
+% signal: Nx7 matrix, double precision.
 
 %% prep work 
 % load metadata 
@@ -27,7 +28,7 @@ if ~isequal(imageNumberSorted,metadata.imageNumber)
 end
 
 % initialise signal matrix (each row is a plate, each column is number of days since inoculation)
-numSignalCols = 6;
+numSignalCols = 7;
 signal = NaN(numROI*size(metadata,1),numSignalCols); 
 
 %% extract metadata info and signal
@@ -59,9 +60,13 @@ for imageCtr = 1:size(metadata,1)
             signal(signalRowIdx,3) = mSignalTable.(varName)(mRowIdx);
             % write the age of the bacteria (i.e. days since inoculation) into the fourth column
             signal(signalRowIdx,4) = datenum(num2str(expDate),'yyyymmdd')- datenum(num2str(bacDate),'yyyymmdd');
-            % keep track of the row and ROI index from metadata file
+            if signal(signalRowIdx,4) > 30 % probably error in date entry
+                warning(['possible date entry error in metadata file: expDate is ' num2str(expDate) ' and bacDate is ' num2str(bacDate)])
+            end
+            % keep track of the row index, ROI index, and experimental date from metadata file
             signal(signalRowIdx,5) = imageCtr;
             signal(signalRowIdx,6) = ROICtr;
+            signal(signalRowIdx,7) = expDate;
         end
     end
 end

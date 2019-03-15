@@ -2,7 +2,7 @@ directory = '/Users/sding/Desktop/maskedTiffs/';
 tiffList = dirSearch(directory,'.tif');
 framesPerStack = 32400;
 for stackCtr = 1
-    tiffStackName = [directory 'stack' num2str(stackCtr) '_rescaledFull.tif'];
+    tiffStackName = [directory '_rescaledFull.tif'];
     startFrame = framesPerStack*(stackCtr-1)+1;
     endFrame = framesPerStack*stackCtr;
     if endFrame>32400

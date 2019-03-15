@@ -9,9 +9,9 @@ close all
 %% set up
 % set analysis parameters
 baseDir = '/Volumes/behavgenom$/Serena/IVIS/timeSeries/';
-date = '20190221'; % string in yyyymmdd format
+date = '20190311'; % string in yyyymmdd format
 numROI = 9;
-plotLivingImageSignal = false; % true: signal measured with LivingImage software; false: signal measured from tiff's
+plotLivingImageSignal = true; % true: signal measured with LivingImage software; false: signal measured from tiff's
 if plotLivingImageSignal
     varName = 'AvgRadiance_p_s_cm__sr_'; % or 'TotalFlux_p_s_';
 else
@@ -21,7 +21,11 @@ else
 end
 pixeltocm =1920/13.2; % 1920 pixels is 13.2 cm
 binFactor = 4;
-saveResults = false;
+saveResults = true;
+
+% suppress specific warning messages associated with the text file format
+warning off MATLAB:table:ModifiedAndSavedVarnames
+warning off MATLAB:handle_graphics:exceptions:SceneNode
 
 % set figure export options
 exportOptions = struct('Format','eps2',...
@@ -33,7 +37,7 @@ exportOptions = struct('Format','eps2',...
     'LineWidth',3);
 
 % extract info from metadata 
-[directory,bacDays,wormGeno,frameRate,numFrames,comment] = getMetadata(baseDir,date,numROI);
+[directory,bacDays,wormGeno,frameRate,numFrames] = getMetadata(baseDir,date,numROI);
 
 % initialise
 addpath('../AggScreening/auxiliary/')
@@ -61,19 +65,15 @@ xlabel('minutes')
 ylabel(varName)
 if plotLivingImageSignal
     ylim([0 2.5e8])
+    if strcmp(date,'20190311')
+        ylim([1e7 4e7])
+    end
 else
     ylim([0 2.5e7])
 end
-if ~strcmp(class(comment),'cell') % add any existing comment to the plot
-    if ~isempty(comment)
-        disp('click on the location for comment and hit return')
-        [x,y] = ginput; % click on the location for comment and hit return
-        text(x,y,comment)
-    end
-end
 
 %% export figure
-figurename = ['results/' date '_signal'];
+figurename = ['results/timeSeries/' date '_signal'];
 if plotLivingImageSignal
     figurename = [figurename 'LivingImage'];
 end
