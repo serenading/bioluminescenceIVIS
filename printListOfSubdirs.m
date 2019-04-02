@@ -1,4 +1,4 @@
-directory = '/Volumes/behavgenom$/Serena/IVIS/growthExp/20190314';
+directory = '/Volumes/behavgenom$/Serena/IVIS/growthExp/20190329';
 files = dir(directory);
 % Get a logical vector that tells which is a directory.
 dirFlags = [files.isdir];

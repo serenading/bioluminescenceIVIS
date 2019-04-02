@@ -37,5 +37,23 @@ elseif expDate == 20190312
             wells = [8,9,7;10,11,12;13,14,15;20,21,19;27,25,26;32,31,33;35,36,34];
         end
     end
+elseif expDate == 20190320
+    if strcmp(session,'am')
+        if dilutionFactor == 10
+            wells = [12,11,9;23,22,24];
+        elseif dilutionFactor == 4
+            wells = [10,8,7;18,16,15;30,28,29;39,31,37];
+        elseif dilutionFactor == 2
+            wells = [5,3,1;6,2,4;17,13,14;21,20,19;27,26,25;34,33,32;36,38,35];
+        end
+    elseif strcmp(session,'pm')
+        if dilutionFactor == 10
+            wells = [1,2,3;22,23,24];
+        elseif dilutionFactor == 4
+            wells = [4,5,7;15,17,18;30,28,29];
+        elseif dilutionFactor == 2
+            wells = [6,9,8;10,12,11;13,16,14;19,21,20;27,25,26;33,32,31];
+        end
+    end
 end
 end

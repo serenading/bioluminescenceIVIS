@@ -4,10 +4,10 @@ close all
 % set analysis variables
 numReps = 3; % 3 by default
 dilutionFactors = [10 4 2];
-exposure = 12; % [1 3 6 12]; % use 1
-expDate = 20190312; % yyyymmdd
+exposure = 3; % [1 3 6 12]; % use 1
+expDate = 20190320; % yyyymmdd
 session = 'pm'; % 'am' or 'pm'
-saveResults = false;
+saveResults = true;
 
 % suppress specific warning messages associated with the text file format
 warning off MATLAB:table:ModifiedAndSavedVarnames 

@@ -9,7 +9,7 @@ close all
 %% set up
 % set analysis parameters
 baseDir = '/Volumes/behavgenom$/Serena/IVIS/timeSeries/';
-date = '20190311'; % string in yyyymmdd format
+date = '20190329'; % string in yyyymmdd format
 numROI = 9;
 plotLivingImageSignal = true; % true: signal measured with LivingImage software; false: signal measured from tiff's
 if plotLivingImageSignal
@@ -21,7 +21,7 @@ else
 end
 pixeltocm =1920/13.2; % 1920 pixels is 13.2 cm
 binFactor = 4;
-saveResults = true;
+saveResults = false;
 
 % suppress specific warning messages associated with the text file format
 warning off MATLAB:table:ModifiedAndSavedVarnames
