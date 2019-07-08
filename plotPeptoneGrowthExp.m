@@ -7,11 +7,16 @@ close all
 
 %% set up
 % set analysis parameters
-baseDir = '/Volumes/behavgenom$/Serena/IVIS/peptoneGrowth/';
+baseDir = '/Volumes/behavgenom$/Serena/bioluminescence/IVIS/peptoneGrowth/';
 numROI = 3;
-varName = 'AvgRadiance_p_s_cm__sr_'; % or 'TotalFlux_p_s_';
+varName = 'TotalFlux_p_s_';%'AvgRadiance_p_s_cm__sr_'; % or 'TotalFlux_p_s_';
 % plotting and export options
-YAxisLimit = [0 8e7];
+colorMap = parula(numROI);
+% if strcmp(varName,'TotalFlux_p_s_')
+%     YAxisLimit = [];
+% elseif strcmp(varName,'AvgRadiance_p_s_cm__sr_')
+%     YAxisLimit = [0 14e7];
+% end
 saveResults = false;
 % set figure export options
 exportOptions = struct('Format','eps2',...
@@ -24,10 +29,7 @@ exportOptions = struct('Format','eps2',...
 
 % initialise
 addpath('../AggScreening/auxiliary/')
-daysOfInoculationBoxPlot = figure;
-if separateSignalPlateID
-    growthCourseLinePlot = figure; hold on
-end
+growthCourseLinePlot = figure; hold on
 
 % suppress specific warning messages associated with the text file format
 warning off MATLAB:table:ModifiedAndSavedVarnames
@@ -36,71 +38,26 @@ warning off MATLAB:handle_graphics:exceptions:SceneNode
 %% get signal
 % get overall signal matrix
 signal = getLivingImageSignal_peptoneGrowthExp(baseDir,numROI,varName);
-% get n numbers for each inoculation length for the overall signal matrix
-uniqueBacDays = unique(signal(:,4));
-for uniqueBacDayCtr = numel(uniqueBacDays):-1:1
-    nNumberBacDays(uniqueBacDayCtr) = sum(signal(:,4) == uniqueBacDays(uniqueBacDayCtr));
-end
-
-%% filter and separate signal as specified
-% filter signal as specified
-signal = filterLivingImageSignal_growthExp(signal,repIDsToKeep,expDatesToDrop,bacDatesToDrop,ROIsToDrop);
-% separate signal plots based on week of growth
-if separateSignalWeek
-    weeklySignal = separateSignalByWeek(signal);
-end
-% separate signal plots based on each plate ID
-if separateSignalPlateID
-    [plateIDs, plateIDSignals,numUniqueBacDates] = separateSignalByPlateID(signal);
-end
+[plateIDs, plateIDSignals] = separateSignalByPlateID_peptoneGrowthExp(signal);
     
-%% plot and format days of inoculation box plot
-set(0,'CurrentFigure',daysOfInoculationBoxPlot)
-if separateSignalWeek
-    numWeeks = numel(weeklySignal);
-    for weekCtr = 1:numWeeks
-        set(0,'CurrentFigure',daysOfInoculationBoxPlot)
-        subplot(2,numWeeks/2,weekCtr)
-        boxplot(weeklySignal{weekCtr}(:,1),weeklySignal{weekCtr}(:,2))
-        title(['Week ' num2str(weekCtr)])
-        xlabel('days of inoculation')
-        ylabel(varName)
-        ylim(YAxisLimit)
-        xlim([0 25])
-        hold on
-    end
-else
-    boxplot(signal(:,3),signal(:,4))
-    xlabel('days of inoculation')
-    ylabel(varName)
-    ylim(YAxisLimit)
-end
-
-% export figure
-figurename = 'results/growthExp/signalLivingImage';
-if separateSignalWeek
-    figurename = [figurename '_weekly'];
-end
-if saveResults
-    exportfig(daysOfInoculationBoxPlot,[figurename '.eps'],exportOptions)
-end
-
-%% optional: signal time course by plate ID plot
-if separateSignalPlateID
+%% plot 
+set(0,'CurrentFigure',growthCourseLinePlot)
+for plateIDCtr = 1:numel(plateIDs)
+    signals = plateIDSignals{plateIDCtr}{:,1};
+    days = plateIDSignals{plateIDCtr}{:,2};
+    signals = reshape(signals,[3,numel(signals)/3]);
+    days = reshape(days,[3,numel(days)/3]);
     set(0,'CurrentFigure',growthCourseLinePlot)
-    colorMap = parula(numUniqueBacDates);
-    for plateIDCtr = 1:numel(plateIDs)
-        colorGroupID = plateIDSignals{plateIDCtr}(1,5);
-        set(0,'CurrentFigure',growthCourseLinePlot)
-        plot(plateIDSignals{plateIDCtr}(:,4),plateIDSignals{plateIDCtr}(:,3),'Color',colorMap(colorGroupID,:))
-    end
-    xlabel('days of inoculation')
-    ylabel(varName)
-    ylim(YAxisLimit)
-    legend(plateIDs,'Interpreter','none','Location','Eastoutside')
-    % export figure
-    figurename = 'results/growthExp/signalLivingImage_byPlateID';
-    if saveResults
-        exportfig(growthCourseLinePlot,[figurename '.eps'],exportOptions)
-    end
+    %boxplot(plateIDSignals{plateIDCtr}{:,2},plateIDSignals{plateIDCtr}{:,1},'Colors',unique(plateIDSignals{plateIDCtr}{:,3})
+    %plot(mean(days,1),mean(signals,1),unique(plateIDSignals{plateIDCtr}{:,4}),'Color',unique(plateIDSignals{plateIDCtr}{:,3}))
+    errorbar(mean(days,1),mean(signals,1),std(signals,1),unique(plateIDSignals{plateIDCtr}{:,4}),'Color',unique(plateIDSignals{plateIDCtr}{:,3}));
+end
+xlabel('days of inoculation')
+ylabel(varName)
+%ylim(YAxisLimit)
+legend(plateIDs,'Interpreter','none','Location','Eastoutside')
+% export figure
+figurename = 'results/peptoneGrowthExp/signalLivingImage_byPlateID';
+if saveResults
+    exportfig(growthCourseLinePlot,[figurename '.eps'],exportOptions)
 end

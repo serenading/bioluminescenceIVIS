@@ -46,13 +46,19 @@ for frameCtr = numFrames:-1:1
     biasInd = find(arrayfun(@(x) strcmp(x,'Read Bias Level:'), analyzedClickInfo{:,1}));
     biasLevel = str2double(analyzedClickInfo{biasInd(1),2});
     % read frame and subtract background
-    lumTiffStack(:,:,frameCtr) = imread(lumFileList{frameCtr})-biasLevel; % uint16
+    currentFrame = imread(lumFileList{frameCtr}); % uint16
+%     if size(currentFrame,1) ==480
+%         currentFrame = imresize(currentFrame,0.5);
+%     end
+    lumTiffStack(:,:,frameCtr) = currentFrame-biasLevel;
 %     darkTiffStack(:,:,frameCtr) = imread(darkFileList{frameCtr});
 %     lumTiffStack(:,:,frameCtr) = lumTiffStack(:,:,frameCtr)-darkTiffStack(:,:,frameCtr);
 end
 
 % go through each ROI to apply mask and extract signal
 for ROICtr = numROI:-1:1
+    %ROImask= imresize(ROImask(:,:,ROICtr),0.5);%%%%%%%
+    %maskedTiffStack = lumTiffStack.*uint16(ROImask)%(:,:,ROICtr));
     maskedTiffStack = lumTiffStack.*uint16(ROImask(:,:,ROICtr));
     signal(ROICtr,:) = squeeze(sum(sum(maskedTiffStack,1),2));
 end

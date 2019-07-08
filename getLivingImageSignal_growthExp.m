@@ -54,8 +54,11 @@ for imageCtr = 1:size(metadata,1)
             % write repID into the second column
             signal(signalRowIdx,2) = metadata.repID(imageCtr);
             % find the row index for the measurement file that match both metadata imageNumber and ROI number
-            mRowIdx  = find(cellfun(@(x) strcmp(x,['ROI ' num2str(ROICtr)]), mSignalTable.ROI) & ... 
-            cellfun(@(x) strcmp(x, imageNumber), mSignalTable.ImageNumber));
+            mRowIdx  = find(cellfun(@(x) strcmp(x,['ROI ' num2str(ROICtr)]), mSignalTable.ROI) & ...
+                cellfun(@(x) strcmp(x, imageNumber), mSignalTable.ImageNumber));
+            if numel(mRowIdx)==0
+                warning(['no mRowIdx found for ROICtr = ' num2str(ROICtr) ', imageCtr = ' num2str(imageCtr)]);
+            end
             % write signal value into the third column
             signal(signalRowIdx,3) = mSignalTable.(varName)(mRowIdx);
             % write the age of the bacteria (i.e. days since inoculation) into the fourth column

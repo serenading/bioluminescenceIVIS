@@ -5,17 +5,17 @@ close all
 numReps = 3; % 3 by default
 dilutionFactors = [10 4 2];
 exposure = 3; % [1 3 6 12]; % use 1
-expDate = 20190320; % yyyymmdd
+expDate = 20190307; % yyyymmdd
 session = 'pm'; % 'am' or 'pm'
-saveResults = true;
+saveResults = false;
 
 % suppress specific warning messages associated with the text file format
 warning off MATLAB:table:ModifiedAndSavedVarnames 
 warning off MATLAB:handle_graphics:exceptions:SceneNode
 
 % load metadata and signal measurement file
-metadata = readtable('/Volumes/behavgenom$/Serena/IVIS/serialDilution/metadata_IVIS_serialDilution.xls');
-mFilename = ['/Volumes/behavgenom$/Serena/IVIS/serialDilution/' num2str(expDate) session '/measurements.txt'];
+metadata = readtable('/Volumes/behavgenom$/Serena/bioluminescence/IVIS/serialDilution/metadata_IVIS_serialDilution.xls');
+mFilename = ['/Volumes/behavgenom$/Serena/bioluminescence/IVIS/serialDilution/' num2str(expDate) session '/measurements.txt'];
 signalTable = readtable(mFilename,'ReadVariableNames',1,'delimiter','\t');
 varName = 'AvgRadiance_p_s_cm__sr_'; % or 'TotalFlux_p_s_';
 
@@ -65,13 +65,15 @@ for dilutionCtr = 1:numel(dilutionFactors)
     xAxisLabels = strings(1,numInSeries);
     % generate x-axis labels
     for seriesCtr = 1:numInSeries
-        xAxisLabels(seriesCtr) = [num2str(dilutionFactor) ' -' num2str(seriesCtr-1)];
+        %xAxisLabels(seriesCtr) = [num2str(dilutionFactor) ' -' num2str(seriesCtr-1)];
+        xAxisLabels(seriesCtr) = ['-' num2str(seriesCtr-1)];
     end
     xticks(xVals)
     xticklabels(xAxisLabels)
     xlabel('dilution')
     ylabel(varName)
     ylim([0 11e7])
+    set(gca,'yscale','log')
     title(['Dilution factor ' num2str(dilutionFactor)])
 end
 
