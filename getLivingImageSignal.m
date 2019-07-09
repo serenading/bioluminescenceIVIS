@@ -1,7 +1,6 @@
 function signal = getLivingImageSignal(directory,numROI,varName)
 
 [ROIMeasurementList, ~] = dirSearch([directory 'measurements/'],'.txt');
-%assert(length(ROIMeasurementList) == numROI,'numROI incorrectly specified');
 % go through each ROI measurement .txt file
 for ROICtr = numROI:-1:1
     filename = ROIMeasurementList{ROICtr};
