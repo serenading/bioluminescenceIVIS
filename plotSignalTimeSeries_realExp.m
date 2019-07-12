@@ -8,10 +8,11 @@ close all
 saveResults = false;
 baseDir = '/Volumes/behavgenom$/Serena/bioluminescence/IVIS/realExp/';
 % set analysis parameters
-expN = 4; % time series experiment number, scalar, i.e. one experiment at a time.
-yVarName = 'TotalFlux_p_s_'; %'AvgRadiance_p_s_cm__sr_'; % or 'TotalFlux_p_s_';
-groupVars = {'bacDays','bacType','bacInoc','wormNum','wormGeno'};
-normaliseSignal = false;
+expNs = [4,5]; % vector of time series experiment number, i,e. 2 or [1:3].
+yVarName = 'TotalFlux_p_s_'; %'AvgRadiance_p_s_cm__sr_' or 'TotalFlux_p_s_'. These are matlab friendly named using readtable function.
+groupVars = {'bacDays','bacType','bacInoc','wormGeno'}; %'wormNum'
+normaliseSignal = true;
+dYdTSmoothWindow = 10;
 
 % suppress specific warning messages associated with the text file format
 warning off MATLAB:table:ModifiedAndSavedVarnames
@@ -26,34 +27,68 @@ exportOptions = struct('Format','eps2',...
     'FontSize',25,...
     'LineWidth',3);
 
-% extract info from metadata
-[directories,expID,numROI,frameRate,bacWormInfo,groupID] = getMetadata_RealExp(baseDir,expN,groupVars);
-
 % initialise
 addpath('../AggScreening/auxiliary/')
-colorMap = parula(numROI);
-pooledColors = {'b','r','k','g','c'};
+
 signalFig = figure; hold on
-pooledFig = figure; hold on
+pooledSignalFig = figure; hold on
 diffFig = figure; hold on
+pooledDiffFig = figure; hold on
+
+%% go through each expN
+
+for expCtr = 1:numel(expNs)
+    expN = expNs(expCtr);
     
-%% process signal
-% get signal (concatenates the two-part series if a second part exists)
-signal = [];
-for dirCtr = 1:numel(directories)
-    directory = directories{dirCtr};
-    signal = [signal, getLivingImageSignal(directory,numROI,yVarName)];
+    %% extract info from metadata
+    [directories,expID,numROI,frameRate,bacWormInfo,groupID] = getMetadata_RealExp(baseDir,expN,groupVars);
+    % bacWormInfo can be a table instead, with groupVars as the heading
+    
+    %% get signal (horizontally concatenates the two-part series if a second part exists)
+    signal = [];
+    for dirCtr = 1:numel(directories)
+        directory = directories{dirCtr};
+        signal = [signal, getLivingImageSignal(directory,numROI,yVarName)];
+    end
+    assert(size(signal,1) == numROI,'signal should be a [numROI x numFrames] matrix')
+    
+    % vertically concatenate signal and other information across different expN 
+    if  expCtr == 1
+        signalCat = signal;
+        bacWormInfoCat = bacWormInfo;
+        groupIDCat = groupID;
+        numROICat = numROI;
+        expIDCat = ['expN' num2str(expN)];
+    else
+        signalCat = vertcat(signalCat, signal);
+        bacWormInfoCat = vertcat(bacWormInfoCat, bacWormInfo);
+        groupIDCat = vertcat(groupIDCat, groupID);
+        numROICat = numROICat+numROI;
+        expIDCat = [expIDCat 'expN' num2str(expN)];
+    end
+    
+    % rename concatenated variables for simplicity
+    signal = signalCat;
+    bacWormInfo = bacWormInfoCat;
+    groupID = groupIDCat;
+    numROI = numROICat;
+    if numel(expNs)>1
+        expID = expIDCat;
+    end
 end
+
+%% process signal
+
 % normalise all signal as a fraction of starting signal
 if normaliseSignal
-    signal = normaliseSignalToControl(signal,groupID); % controls have groupID=0
     signal = normaliseSignalToStart(signal);
+    signal = normaliseSignalToControl(signal,groupID); % controls have groupID=0
 end
-% question: which normalisations to use?
 
 % calculate signal derivative
-[dYdX dYdXMedian] = takeSignalDerivative(signal,frameRate);
-% question: how to ignore near 0 dYdX values in calculating the median metric? i.e. when no food left and signal is zero
+% signalSmooth = smoothdata(signal,1,'gaussian',20);
+dYdT = takeSignalDerivative(signal,frameRate,dYdTSmoothWindow);
+% calculating time to half max 
 
 %% plot and format
 
@@ -62,6 +97,7 @@ end
 varLegends = generateVarLegends(bacWormInfo,numROI,groupVars);
 
 % Fig 1: plain signal plot
+colorMap = parula(numROI);
 legends = cell(1,numROI);
 for ROICtr = 1:numROI
     set(0,'CurrentFigure',signalFig)
@@ -70,7 +106,7 @@ for ROICtr = 1:numROI
 end
 legend(legends,'Location','Eastoutside','Interpreter','none')
 xTick = get(gca, 'XTick');
-set(gca,'XTick',xTick','XTickLabel',xTick*60/frameRate) % rescale x-axis for according to acquisition frame rate
+set(gca,'XTick',xTick','XTickLabel',xTick*frameRate) % rescale x-axis for according to acquisition frame rate
 xlabel('minutes')
 if normaliseSignal
     ylabel('normalisedSignal')
@@ -80,7 +116,8 @@ end
 title(expID,'Interpreter','none')
 
 % Fig 2: shadedErrorBar for pooling replicates
-set(0,'CurrentFigure',pooledFig)
+pooledColors = {'b','r','k','g','c'};
+set(0,'CurrentFigure',pooledSignalFig)
 mainLineHandles = [];
 % get indices for the desired groupID
 uniqueGroupIDs = unique(groupID,'stable');
@@ -93,12 +130,12 @@ for groupCtr = 1:numel(uniqueGroupIDs)
         mainLineHandles = [mainLineHandles H(groupCtr).mainLine];
     % otherwise use simple plot
     else
-        A = plot(signal(groupInd,:),'Color',pooledColors{groupCtr});
-        mainLineHandles = [mainLineHandles A];
+        H2 = plot(signal(groupInd,:),'Color',pooledColors{groupCtr});
+        mainLineHandles = [mainLineHandles H2];
     end
 end
 xTick = get(gca, 'XTick');
-set(gca,'XTick',xTick','XTickLabel',xTick*60/frameRate) % rescale x-axis for according to acquisition frame rate
+set(gca,'XTick',xTick','XTickLabel',xTick*frameRate) % rescale x-axis for according to acquisition frame rate
 xlabel('minutes')
 if normaliseSignal
     ylabel('normalisedSignal')
@@ -109,26 +146,66 @@ title(expID,'Interpreter','none')
 pooledLegends = unique(varLegends,'stable');
 assert(numel(pooledLegends) == numel(unique(groupID)),...
     ['Total ' num2str(numel(unique(groupID))) ' groupIDs but total ' num2str(numel(pooledLegends)) ' pooled legend labels']);
-if normaliseSignal % remove handle and legends for the control group if using controls to normalise signal
-    groupIDLogInd = uniqueGroupIDs~=0;
-    mainLineHandles = mainLineHandles(groupIDLogInd);
-    pooledLegends = pooledLegends(groupIDLogInd);
-end
+% if normaliseSignal % remove handle and legends for the control group if using controls to normalise signal
+%     groupIDLogInd = uniqueGroupIDs~=0;
+%     mainLineHandles = mainLineHandles(groupIDLogInd);
+%     pooledLegends = pooledLegends(groupIDLogInd);
+% end
 legend(mainLineHandles,pooledLegends,'Location','Eastoutside','Interpreter','none')
 
 % Fig 3: plot signal derivative 
-
 for ROICtr = 1:numROI
     set(0,'CurrentFigure',diffFig)
-    plot(1:length(dYdX(ROICtr,:)),dYdX(ROICtr,:),'Color',colorMap(ROICtr,:))
+    plot(1:length(dYdT(ROICtr,:)),dYdT(ROICtr,:),'Color',colorMap(ROICtr,:))
 end
 legend(legends,'Location','Eastoutside','Interpreter','none')
 xTick = get(gca, 'XTick');
-set(gca,'XTick',xTick','XTickLabel',xTick*60/frameRate) % rescale x-axis for according to acquisition frame rate
+set(gca,'XTick',xTick','XTickLabel',xTick*frameRate) % rescale x-axis for according to acquisition frame rate
 xlabel('minutes')
-ylabel(['change in ' yVarName 'per minute'],'Interpreter','none')
+ylabel(['change in ' yVarName 'per ' num2str(frameRate*dYdTSmoothWindow) 'minutes'],'Interpreter','none')
 title(expID,'Interpreter','none')
 
+% Fig 4: shadedErrorBar for pooling derivative replicates
+
+set(0,'CurrentFigure',pooledDiffFig)
+mainLineHandles = [];
+% get indices for the desired groupID
+uniqueGroupIDs = unique(groupID,'stable');
+for groupCtr = 1:numel(uniqueGroupIDs)
+    groupInd = groupID == uniqueGroupIDs(groupCtr);
+    % only use shadedErrorBar if there are more than 1 replicate
+    if nnz(groupInd)>1
+        % plot shaded error bar
+        H(groupCtr) = shadedErrorBar([],dYdT(groupInd,:),{@median,@std},pooledColors{groupCtr},1);
+        mainLineHandles = [mainLineHandles H(groupCtr).mainLine];
+    % otherwise use simple plot
+    else
+        H2 = plot(dYdT(groupInd,:),'Color',pooledColors{groupCtr});
+        mainLineHandles = [mainLineHandles H2];
+    end
+end
+xTick = get(gca, 'XTick');
+set(gca,'XTick',xTick','XTickLabel',xTick*frameRate) % rescale x-axis for according to acquisition frame rate
+xlabel('minutes')
+if normaliseSignal
+    ylim([-0.25,0.1])
+    ylabel(['change in normalised signal per ' num2str(frameRate*dYdTSmoothWindow) ' minutes'],'Interpreter','none')
+else
+    ylabel(['change in ' yVarName 'per ' num2str(frameRate*dYdTSmoothWindow) 'minutes'],'Interpreter','none')
+end
+title(expID,'Interpreter','none')
+pooledLegends = unique(varLegends,'stable');
+assert(numel(pooledLegends) == numel(unique(groupID)),...
+    ['Total ' num2str(numel(unique(groupID))) ' groupIDs but total ' num2str(numel(pooledLegends)) ' pooled legend labels']);
+% if normaliseSignal % remove handle and legends for the control group if using controls to normalise signal
+%     groupIDLogInd = uniqueGroupIDs~=0;
+%     mainLineHandles = mainLineHandles(groupIDLogInd);
+%     pooledLegends = pooledLegends(groupIDLogInd);
+% end
+legend(mainLineHandles,pooledLegends,'Location','Eastoutside','Interpreter','none')
+
+%% display median feeding rates over the first 4 hours
+display(['npr-1 feeding rate is' num2str(median(H(1).mainLine.YData(1:40)))])
 
 %% export figures
 figurename = ['results/realExp/' expID];
@@ -140,9 +217,8 @@ difffigurename = [figurename '_derivative'];
 diffMedianValName = [difffigurename '_medianVal'];
 if saveResults
     exportfig(signalFig,[figurename '.eps'],exportOptions)
-    exportfig(pooledFig,[pooledfigurename '.eps'],exportOptions)
+    exportfig(pooledSignalFig,[pooledfigurename '.eps'],exportOptions)
     exportfig(diffFig,[difffigurename '.eps'],exportOptions)
-    save([diffMedianValName '.mat'],'dYdXMedian','varLegends')
 end
 
 
@@ -160,7 +236,7 @@ numROI = numel(unique(metadata.ROI(expLogInd)));
 % get directory names. There should only be 1 or 2 directory names,
 % depending on whether over 99 frames are acquired for the experiment on
 % the IVIS via the batch sequence option
-date = unique(metadata.expDate(expLogInd));
+date = unique(metadata.date(expLogInd)); % this date is the experiment date
 subDirName = unique(metadata.subDirName(expLogInd));
 assert(numel(date) == 1, 'More than one experiment dates found for this experiment number');
 for subDirCtr = numel(subDirName):-1:1
@@ -172,7 +248,7 @@ assert(numel(directories)==1|numel(directories)==2,'There should only be 1 or 2 
 dirSplit = strsplit(directories{1},'/');
 expID = [dirSplit{end-2} '_' dirSplit{end-1}];
 % get frame rate
-frameRate = 60/unique(metadata.frameInterval_min(expLogInd)); % frames per hour
+frameRate = unique(metadata.frameInterval_min(expLogInd)); % frames per minute
 assert(numel(frameRate)==1, 'There should be only one frame interval found for this experiment number. Check metadata.');
 % use the first subDir dataset to extract subsequent info if more than one dataset is available
 if numel(directories)>1 
@@ -184,9 +260,9 @@ for ROICtr = numROI:-1:1
     for varCtr = 1:numel(groupVars)
         groupVar = groupVars{varCtr};
         if strcmp(groupVar,'bacDays')
-            expDate = datenum(char(metadata.expDate(expLogInd & metadata.ROI == ROICtr)),'yyyymmdd');
+            date = datenum(char(metadata.date(expLogInd & metadata.ROI == ROICtr)),'yyyymmdd');
             bacDate = datenum(char(metadata.bacDate(expLogInd & metadata.ROI == ROICtr)),'yyyymmdd');
-            bacWormInfo{ROICtr,varCtr} = [num2str(expDate-bacDate)...
+            bacWormInfo{ROICtr,varCtr} = [num2str(date-bacDate)...
                 'dayOldBac'];
         elseif strcmp(groupVar,'wormNum')
             bacWormInfo{ROICtr,varCtr} = [num2str(metadata.(groupVar)(expLogInd & metadata.ROI == ROICtr)) 'worms'];
@@ -204,23 +280,30 @@ function signal = normaliseSignalToControl(signal,groupID)
 
 controlInd = groupID==0; % control plates are assigned groupID of 0
 controlSignal = mean(signal(controlInd,:),1); % average control signals if multiple replicates exist
-signal = signal - controlSignal; % normalise non-control signals against control signal
+signal = signal./controlSignal; % normalise non-control signals against control signal
 end
 
 %% function to normalise signal to the starting value
 function signal = normaliseSignalToStart(signal)
 
 initialSignal = signal(:,1); % get starting signal (which isn't always the highest signal, unfortunately)
+% signal(:,1) may not work when numROI ==1, in which case specify that case with if
 signal = signal./initialSignal; % normalise signal against the starting value
 end
 
 %% function to calculate signal derivative
-function [dYdX,dYdXMedian] = takeSignalDerivative(signal,frameRate)
+function dYdT = takeSignalDerivative(signal,frameRate,derivativeSmoothWindow)
 
-dYSignal = diff(signal,1,2); % take first derivative in the second dimension
-dX = 60/frameRate; % time step in minutes
-dYdX = dYSignal/dX; % dYdX to be plotted - change in signal per minute
-dYdXMedian = median(dYdX,2); % median dYdX
+% get change in signal
+% dYSignal = diff(signal,1,2); % take first derivative in the second dimension
+signalShiftWindow = zeros(size(signal,1),derivativeSmoothWindow);
+signalStart = [signalShiftWindow signal];
+signalEnd = [signal signalShiftWindow];
+signalDiff = signalEnd - signalStart;
+signalDiff = signalDiff(:,[derivativeSmoothWindow+1:end-derivativeSmoothWindow]);
+% 
+dT = 1/frameRate*derivativeSmoothWindow; % time step in minutes
+dYdT = signalDiff/dT; % dYdT to be plotted
 end
 
 %% function to determine which variables are different between replicates and write to varLegends.
