@@ -42,15 +42,19 @@ signal = getLivingImageSignal_peptoneGrowthExp(baseDir,numROI,varName);
     
 %% plot 
 set(0,'CurrentFigure',growthCourseLinePlot)
-for plateIDCtr = 1:numel(plateIDs)
+for plateIDCtr = [3,6,9]%1:numel(plateIDs)
     signals = plateIDSignals{plateIDCtr}{:,1};
     days = plateIDSignals{plateIDCtr}{:,2};
     signals = reshape(signals,[3,numel(signals)/3]);
     days = reshape(days,[3,numel(days)/3]);
     set(0,'CurrentFigure',growthCourseLinePlot)
-    %boxplot(plateIDSignals{plateIDCtr}{:,2},plateIDSignals{plateIDCtr}{:,1},'Colors',unique(plateIDSignals{plateIDCtr}{:,3})
-    %plot(mean(days,1),mean(signals,1),unique(plateIDSignals{plateIDCtr}{:,4}),'Color',unique(plateIDSignals{plateIDCtr}{:,3}))
+%     boxplot(plateIDSignals{plateIDCtr}{:,2},plateIDSignals{plateIDCtr}{:,1},'Colors',unique(plateIDSignals{plateIDCtr}{:,3})
+%     plot(mean(days,1),mean(signals,1),unique(plateIDSignals{plateIDCtr}{:,4}),'Color',unique(plateIDSignals{plateIDCtr}{:,3}))
+    % use lines with error bars
     errorbar(mean(days,1),mean(signals,1),std(signals,1),unique(plateIDSignals{plateIDCtr}{:,4}),'Color',unique(plateIDSignals{plateIDCtr}{:,3}));
+%     % or use shadedErrorBar
+%     clr = {'b','b','b','r','r','r','k','k','k'};
+%     H(plateIDCtr) = shadedErrorBar(mean(days,1),signals,{@median,@std},clr{plateIDCtr},1);
 end
 xlabel('days of inoculation')
 ylabel(varName)
@@ -61,3 +65,15 @@ figurename = 'results/peptoneGrowthExp/signalLivingImage_byPlateID';
 if saveResults
     exportfig(growthCourseLinePlot,[figurename '.eps'],exportOptions)
 end
+
+% %% export formatting for paper fig%%%
+% open('/Users/sding/Dropbox/bioluminescence paper/figsForPaper/peptoneSignal/peptoneGrowthDays.fig')
+% children = get(gca, 'children')
+% delete(children(2:3))
+% delete(children(5:6))
+% delete(children(8:9))
+% ylim([0 14e9])
+% ylabel('signal (x10^9 photons/s)') % only because exportfig cuts off the x10^9!
+% hLegend = findobj(gcf, 'Type', 'Legend');
+% hLegend.Location = 'northeast';
+% hLegend.String = {'RP','LP','NP'}

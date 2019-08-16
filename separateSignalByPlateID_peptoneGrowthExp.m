@@ -25,8 +25,8 @@ uniquePeps = unique(peptones);
 repIDLabels = {'1','2','3'};
 ROILabels = {'L','M','S'};
 pepLabels = {'RP','LP','NP'};
-plotType = {'-','-.',':'}; % for plate size
-plotColor = {'b','r','g'}; % for peptone level
+plotType = {':','-.','-'}; % for plate size
+plotColor = {'b','r','k'}; % for peptone level
 
 %% find number of unique plateID's
 % initialise

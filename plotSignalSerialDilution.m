@@ -1,5 +1,5 @@
 clear
-close all
+%close all
 
 % set analysis variables
 numReps = 3; % 3 by default
@@ -17,7 +17,7 @@ warning off MATLAB:handle_graphics:exceptions:SceneNode
 metadata = readtable('/Volumes/behavgenom$/Serena/bioluminescence/IVIS/serialDilution/metadata_IVIS_serialDilution.xls');
 mFilename = ['/Volumes/behavgenom$/Serena/bioluminescence/IVIS/serialDilution/' num2str(expDate) session '/measurements.txt'];
 signalTable = readtable(mFilename,'ReadVariableNames',1,'delimiter','\t');
-varName = 'AvgRadiance_p_s_cm__sr_'; % or 'TotalFlux_p_s_';
+varName = 'TotalFlux_p_s_';%'AvgRadiance_p_s_cm__sr_'; % or 'TotalFlux_p_s_';
 
 % set figure export options
 exportOptions = struct('Format','eps2',...
@@ -31,9 +31,10 @@ exportOptions = struct('Format','eps2',...
 % create figure
 addpath('../AggScreening/auxiliary/')
 serialDilutionSignalFig = figure; hold on
+pooledFig = figure; hold on
 
 % go through each dilution
-for dilutionCtr = 1:numel(dilutionFactors)
+for dilutionCtr = 3%1:numel(dilutionFactors)
     dilutionFactor = dilutionFactors(dilutionCtr);
     wells = getWellROIs(expDate,session,dilutionFactor);
     %% get signal
@@ -58,7 +59,8 @@ for dilutionCtr = 1:numel(dilutionFactors)
     % plot each replicate as an individual line
     xVals = 1:numInSeries;
     for repCtr = 1:numReps
-        subplot(1,numel(dilutionFactors),dilutionCtr)
+        %subplot(1,numel(dilutionFactors),dilutionCtr)
+        set(0,'CurrentFigure',serialDilutionSignalFig)
         hold on
         plot(xVals,signal(:,repCtr),'-x')
     end
@@ -66,15 +68,27 @@ for dilutionCtr = 1:numel(dilutionFactors)
     % generate x-axis labels
     for seriesCtr = 1:numInSeries
         %xAxisLabels(seriesCtr) = [num2str(dilutionFactor) ' -' num2str(seriesCtr-1)];
-        xAxisLabels(seriesCtr) = ['-' num2str(seriesCtr-1)];
+        xAxisLabels(seriesCtr) = ['1e-' num2str(seriesCtr-1)];
     end
     xticks(xVals)
     xticklabels(xAxisLabels)
     xlabel('dilution')
-    ylabel(varName)
-    ylim([0 11e7])
-    set(gca,'yscale','log')
+    ylabel('signal (photons/s)')
+    ylim([1e6 1e9])
+        set(gca,'yscale','linear')
+    set(gca,'xscale','log')
     title(['Dilution factor ' num2str(dilutionFactor)])
+    
+    % pooled plot 
+    signal = fliplr(signal'); 
+    set(0,'CurrentFigure',pooledFig)
+    H = shadedErrorBar(1:size(signal,2),signal,{@median,@std},{'r-o','markerfacecolor','r'});
+    set(gca,'xscale','linear')
+    set(gca,'yscale','log')
+    ylim([1e6 1e9])
+    ylabel('signal (photons/s)')
+    xlabel('dilution')
+    xticklabels({'2e-7','2e-6','2e-5','2e-4','2e-3','2e-2','2e-1', '1'})
 end
 
 % export figure

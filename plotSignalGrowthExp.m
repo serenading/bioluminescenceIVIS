@@ -9,16 +9,16 @@ clear
 % set analysis parameters
 baseDir = '/Volumes/behavgenom$/Serena/bioluminescence/IVIS/growthExp/';
 numROI = 9;
-varName = 'AvgRadiance_p_s_cm__sr_'; % or 'TotalFlux_p_s_';
+varName = 'TotalFlux_p_s_';%'AvgRadiance_p_s_cm__sr_'; % or 'TotalFlux_p_s_';
 % filter signal options 
 repIDsToKeep = []; % [] by default to keep all. [repID1,repID4:repID7] to subselect plate replicates for analysis
 bacDatesToDrop = [20190301:20190308]; % [] by default to exclude none. [yyyymmdd, yyyymmmdd:yyyymmdd] to ignore experiments with bacteria inoculated on a particular date
-expDatesToDrop = []; % [] by default to exclude none. [yyyymmdd] to ignore experiments collected on a particular date
+expDatesToDrop = [20190319:20190405]; % [] by default to exclude none. [yyyymmdd] to ignore experiments collected on a particular date
 ROIsToDrop = []; % [] by default to exclude none. [ROInumber] to ignore experiments from a particular ROI
 separateSignalWeek = false;
 separateSignalPlateID = true;
 % plotting and export options
-YAxisLimit = [0 8e7];
+YAxisLimit = [0 8e9];
 saveResults = false;
 % set figure export options
 exportOptions = struct('Format','eps2',...
