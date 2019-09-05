@@ -1,7 +1,11 @@
 clear
 close all
 
-expDir = '/Volumes/behavgenom$/Serena/bioluminescence/IVIS/realExp/20190808/SD20190808184425_SEQ';
+%% script combines all the luminescent.tif files from individual frame folders of a time series sequence,
+% rescales using min and max intensity of the sequence, and makes a .mp4 movie
+
+expDir = '/Volumes/behavgenom$/Serena/bioluminescence/IVIS/realExp/20190729/SD20190729200503_SEQ';
+expDir2 = '/Volumes/behavgenom$/Serena/bioluminescence/IVIS/realExp/20190729/SD20190729214339_SEQ';
 
 % get list of frame folders
 framesList = dir([expDir,'/SD2019*']);
@@ -10,6 +14,18 @@ for i = numel(framesList):-1:1
 end
 framesList = framesList(idxGood);
 
+% check to see if a second directory exists
+bool = exist('expDir2','var');
+if bool
+    framesList2 = dir([expDir2,'/SD2019*']);
+    for i = numel(framesList2):-1:1
+        idxGood2(i) = framesList2(i).isdir;
+    end
+    framesList2 = framesList2(idxGood2);
+    % concatenate framesList
+    framesList = vertcat(framesList,framesList2);
+end
+    
 % make a full framestack
 frameStack = zeros(480, 480, numel(framesList), 'uint16');
 for i = 1:numel(framesList)
@@ -21,9 +37,11 @@ end
 minval = min(frameStack(:));
 frameStack = frameStack-minval;
 maxval = single(prctile(frameStack(:),99.99)); % use 99.99 percentile (instead of max) to avoid hot pixels
+display([minval maxval])
 
 % make video
 vo = VideoWriter('test','MPEG-4');
+vo.FrameRate = 15;
 open(vo);
 
 for i = 1:size(frameStack,3)

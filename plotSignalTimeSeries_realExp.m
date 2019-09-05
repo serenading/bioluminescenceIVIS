@@ -8,12 +8,12 @@ close all
 saveResults = false;
 baseDir = '/Volumes/behavgenom$/Serena/bioluminescence/IVIS/realExp/';
 % set analysis parameters
-expNs = [17]; % vector of time series experiment number, i,e. 2 or [1:3].
+expNs = [15]; % vector of time series experiment number, i,e. 2 or [1:3].
 yVarName = 'TotalFlux_p_s_'; %'AvgRadiance_p_s_cm__sr_' or 'TotalFlux_p_s_'. These are matlab friendly named using readtable function.
 groupVars = {'bacDays','bacType','bacInoc','wormGeno','plateDrug'};%,',,'peptoneLevel'};%,'wormNum'}; %'wormNum'
 normaliseSignal = true;
 dYdTSmoothWindow = 10;
-pooledColors = {'b','r','k','m'};
+pooledColors = {'b','r','m','k'};
 plotControl = true;
 
 % suppress specific warning messages associated with the text file format
@@ -43,7 +43,7 @@ for expCtr = 1:numel(expNs)
     expN = expNs(expCtr);
     
     %% extract info from metadata
-    [directories,expID,numROI,frameRate,bacWormInfo,groupIDs,metadata] = getMetadata_RealExp(baseDir,expN,groupVars);
+    [directories,expID,numROI,frameInterval,bacWormInfo,groupIDs,metadata] = getMetadata_RealExp(baseDir,expN,groupVars);
     % bacWormInfo can be a table instead, with groupVars as the heading
     
     %% get signal (horizontally concatenates the two-part series if a second part exists)
@@ -89,8 +89,11 @@ if normaliseSignal
     end
 end
 
+if expN == 15
+    signal = signal(:,1:2:end);
+end
 % calculate signal derivative
-dYdT = takeSignalDerivative(signal,frameRate,dYdTSmoothWindow);
+dYdT = takeSignalDerivative(signal,frameInterval,dYdTSmoothWindow);
 
 % calculating time to half max signal
 
@@ -110,7 +113,7 @@ for ROICtr = 1:numROI
 end
 legend(legends,'Location','northeast','Interpreter','none')
 xTick = get(gca, 'XTick');
-set(gca,'XTick',xTick','XTickLabel',xTick*frameRate) % rescale x-axis for according to acquisition frame rate
+set(gca,'XTick',xTick','XTickLabel',xTick*frameInterval) % rescale x-axis for according to acquisition frame rate
 xlabel('minutes')
 if normaliseSignal
     ylabel('normalisedSignal')
@@ -138,7 +141,7 @@ for groupCtr = 1:numel(uniqueGroupIDs)
     end
 end
 xTick = get(gca, 'XTick');
-set(gca,'XTick',xTick','XTickLabel',xTick*frameRate) % rescale x-axis for according to acquisition frame rate
+set(gca,'XTick',xTick','XTickLabel',xTick*frameInterval) % rescale x-axis for according to acquisition frame rate
 xlabel('minutes')
 if normaliseSignal
     ylabel('normalisedSignal')
@@ -166,9 +169,9 @@ for ROICtr = 1:numROI
 end
 legend(legends,'Location','northeast','Interpreter','none')
 xTick = get(gca, 'XTick');
-set(gca,'XTick',xTick','XTickLabel',xTick*frameRate) % rescale x-axis for according to acquisition frame rate
+set(gca,'XTick',xTick','XTickLabel',xTick*frameInterval) % rescale x-axis for according to acquisition frame rate
 xlabel('minutes')
-ylabel(['change in ' yVarName 'smoothed over ' num2str(frameRate*dYdTSmoothWindow) 'minutes'],'Interpreter','none')
+ylabel(['change in ' yVarName 'smoothed over ' num2str(frameInterval*dYdTSmoothWindow) 'minutes'],'Interpreter','none')
 title(expID,'Interpreter','none')
 
 % Fig 4: shadedErrorBar for pooling derivative replicates
@@ -190,12 +193,12 @@ for groupCtr = 1:numel(uniqueGroupIDs)
     end
 end
 xTick = get(gca, 'XTick');
-set(gca,'XTick',xTick','XTickLabel',xTick*frameRate) % rescale x-axis for according to acquisition frame rate
+set(gca,'XTick',xTick','XTickLabel',xTick*frameInterval) % rescale x-axis for according to acquisition frame rate
 xlabel('minutes')
 if normaliseSignal
-    ylabel(['change in normalised signal smoothed over ' num2str(frameRate*dYdTSmoothWindow) ' minutes'],'Interpreter','none')
+    ylabel('d/dt normalised signal (minute^{-1})')
 else
-    ylabel(['change in ' yVarName 'smoothed over ' num2str(frameRate*dYdTSmoothWindow) 'minutes'],'Interpreter','none')
+    ylabel(['change in ' yVarName 'smoothed over ' num2str(frameInterval*dYdTSmoothWindow) 'minutes'],'Interpreter','none')
 end
 title(expID,'Interpreter','none')
 pooledLegends = unique(varLegends,'stable');
@@ -217,7 +220,7 @@ if expN > 3 & expN < 9 | expN >9 & expN <13 % for genotype experiments (4-8) and
     for groupCtr = 1:numel(pooledLegends)
         % display feeding rate calculated from derivatives from the first 4
         % hours of experiments
-        display([pooledLegends{groupCtr} ' feeding rate is ' num2str(median(mainLineHandles(groupCtr).YData(1:4*60/frameRate)))])
+        display([pooledLegends{groupCtr} ' feeding rate is ' num2str(median(mainLineHandles(groupCtr).YData(1:4*60/frameInterval)))])
     end
 end
 
@@ -240,7 +243,7 @@ end
 %% local functions 
 
 %% function to extract metadata
-function [directories,expID,numROI,frameRate,bacWormInfo,groupIDs,metadata] = getMetadata_RealExp(baseDir,expN,groupVars)
+function [directories,expID,numROI,frameInterval,bacWormInfo,groupIDs,metadata] = getMetadata_RealExp(baseDir,expN,groupVars)
 
 % read metadata
 metadata = readtable([baseDir 'metadata_IVIS_realExp.xls']);
@@ -266,8 +269,8 @@ assert(numel(directories)==1|numel(directories)==2,'There should only be 1 or 2 
 dirSplit = strsplit(directories{1},'/');
 expID = [dirSplit{end-2} '_' dirSplit{end-1}];
 % get frame rate
-frameRate = unique(metadata.frameInterval_min(expLogInd)); % frames per minute
-assert(numel(frameRate)==1, 'There should be only one frame interval found for this experiment number. Check metadata.');
+frameInterval = unique(metadata.frameInterval_min(expLogInd)); % frames per minute
+assert(numel(frameInterval)==1, 'There should be only one frame interval found for this experiment number. Check metadata.');
 % use the first subDir dataset to extract subsequent info if more than one dataset is available
 if numel(directories)>1 
     expLogInd = expLogInd & strcmp(metadata.subDirName, subDirName{1});
@@ -341,17 +344,18 @@ signal = signal./initialSignal; % normalise signal against the starting value
 end
 
 %% function to calculate signal derivative
-function dYdT = takeSignalDerivative(signal,frameRate,derivativeSmoothWindow)
+function dYdT = takeSignalDerivative(signal,frameInterval,derivativeSmoothWindow)
 
 % get change in signal
-signalShiftWindow = zeros(size(signal,1),derivativeSmoothWindow);
-signalStart = [signalShiftWindow signal];
-signalEnd = [signal signalShiftWindow];
-signalDiff = signalEnd - signalStart;
-signalDiff = signalDiff(:,[derivativeSmoothWindow+1:end-derivativeSmoothWindow]);
+signalShiftWindow = zeros(size(signal,1),derivativeSmoothWindow); % generate zero pad
+signalStart = [signalShiftWindow signal]; % zero pad
+signalEnd = [signal signalShiftWindow]; % zero pad
+signalDiff = signalEnd - signalStart; % take signal difference
+signalDiff = signalDiff(:,[derivativeSmoothWindow+1:end-derivativeSmoothWindow]); % remove the padded signal
 % 
-dT = 1/frameRate*derivativeSmoothWindow; % time step in minutes
-dYdT = signalDiff/dT; % dYdT to be plotted
+frameRate = 1/frameInterval;
+dT = derivativeSmoothWindow/frameRate; % time step in minutes
+dYdT = signalDiff/dT; % dYdT to be plotted, in the unit of min^-1
 end
 
 %% function to determine which variables are different between replicates and write to varLegends.

@@ -17,33 +17,48 @@ ppmFig = figure;
 
 % off food subplot
 subplot(1,2,1)
-boxplot(ppm(1:25),group(1:25));
-set(gca,'XTickLabel',{'noDrug','5HT','NLX'})
-title('offFood')
+boxplot(ppm(1:25),group(1:25),'BoxStyle','filled');
+rotation = 45; 
+set(gca,'XTickLabelRotation',rotation);
+set(gca,'XTickLabel',{'no drug','serotonin','naloxone'})
 ylim([0 350])
-ylabel('ppm')
+ylabel('pumps per minute')
+% change filled boxplot width
+a = get(get(gca,'children'),'children');   % Get the handles of all the objects
+t = get(a,'tag');   % List the names of all the objects 
+idx=strcmpi(t,'box');  % Find Box objects
+boxes=a(idx);          % Get the children you need
+set(boxes,'linewidth',15); % Set width
 
 % on food subplot
 subplot(1,2,2)
-boxplot(ppm(26:end),group(26:end));
-set(gca,'XTickLabel',{'noDrug','5HT','NLX'})
-title('onFood')
+boxplot(ppm(26:end),group(26:end),'BoxStyle','filled');
+rotation = 45; 
+set(gca,'XTickLabelRotation',rotation);
+set(gca,'XTickLabel',{'no drug','serotonin','naloxone'})
 ylim([0 350])
-ylabel('ppm')
+ylabel('pumps per minute')
+% change filled boxplot width
+a = get(get(gca,'children'),'children');   % Get the handles of all the objects
+t = get(a,'tag');   % List the names of all the objects 
+idx=strcmpi(t,'box');  % Find Box objects
+boxes=a(idx);          % Get the children you need
+set(boxes,'linewidth',15); % Set width
+%
 
 % set figure export options
 exportOptions = struct('Format','eps2',...
     'Color','rgb',...
-    'Width',30,...
+    'Width',20,...
     'Resolution',300,...
     'FontMode','fixed',...
-    'FontSize',25,...
-    'LineWidth',5);
+    'FontSize',18,...
+    'LineWidth',3);
 
 % export figure
 addpath('../AggScreening/auxiliary/')
-figurename = ['results/ppm'];
-%exportfig(ppmFig,[figurename '.eps'],exportOptions)
+figurename = '/Users/sding/Dropbox/bioluminescence paper/figsForPaper/drugPharyngealPumping_filled';
+exportfig(ppmFig,[figurename '.eps'],exportOptions)
 
 % two sample t-test, assuming normal distributions and unknown and unequal variances
 offFoodNoDrugLogInd = group==1;
