@@ -1,5 +1,5 @@
 clear
-close all
+%close all
 
 %% script plots bioluminescence signal acquired on the IVIS spectrum and plots signal over time.
 % Signal is measured by Living Image 4.3.1 software (photons/sec/cm^2/sr;),
@@ -8,12 +8,13 @@ close all
 saveResults = false;
 baseDir = '/Volumes/behavgenom$/Serena/bioluminescence/IVIS/realExp/';
 % set analysis parameters
-expNs = [15]; % vector of time series experiment number, i,e. 2 or [1:3].
+expNs = [12,30,31]; % vector of time series experiment number, i,e. 2 or [1:3].
+% expN [4,5,6]for geno ilux; [10,11,29] for drug ilux; [12,30,31] for drug GFP
 yVarName = 'TotalFlux_p_s_'; %'AvgRadiance_p_s_cm__sr_' or 'TotalFlux_p_s_'. These are matlab friendly named using readtable function.
 groupVars = {'bacDays','bacType','bacInoc','wormGeno','plateDrug'};%,',,'peptoneLevel'};%,'wormNum'}; %'wormNum'
 normaliseSignal = true;
 dYdTSmoothWindow = 10;
-pooledColors = {'b','r','m','k'};
+pooledColors = {'b','r','k','m'};
 plotControl = true;
 
 % suppress specific warning messages associated with the text file format
@@ -54,7 +55,7 @@ for expCtr = 1:numel(expNs)
     end
     assert(size(signal,1) == numROI,'signal should be a [numROI x numFrames] matrix')
     
-    % vertically concatenate signal and other information across different expN 
+    % vertically concatenate signal and other information across different expN
     if  expCtr == 1
         signalCat = signal;
         bacWormInfoCat = bacWormInfo;
@@ -85,7 +86,7 @@ end
 if normaliseSignal
     signal = normaliseSignalToStart(signal);
     if expN < 22 | expN >24 % expN 22-24 do not have control groups: zoomed in ROI A therefore no control
-        signal = normaliseSignalToControl(signal,groupIDs,expN); % controls have groupID=0 or corresponding negative values
+        signal = normaliseSignalToControl(signal,groupIDs,expNs); % controls have groupID=0 or corresponding negative values
     end
 end
 
@@ -99,7 +100,7 @@ dYdT = takeSignalDerivative(signal,frameInterval,dYdTSmoothWindow);
 
 %% plot and format
 
-% get varLegends, a legend array containing metadata info that's unique to some replicates. 
+% get varLegends, a legend array containing metadata info that's unique to some replicates.
 % This legend array subsequently gets used to generate legends for appropriate plots
 varLegends = generateVarLegends(bacWormInfo,numROI,groupVars);
 
@@ -132,9 +133,9 @@ for groupCtr = 1:numel(uniqueGroupIDs)
     % only use shadedErrorBar if there are more than 1 replicate
     if nnz(groupInd)>1
         % plot shaded error bar
-        H(groupCtr) = shadedErrorBar([],signal(groupInd,:),{@median,@std},pooledColors{groupCtr},1);
+        H(groupCtr) = shadedErrorBar([],signal(groupInd,:),{@median,@std},'lineprops',['-',pooledColors{groupCtr}],'transparent',1);
         mainLineHandles = [mainLineHandles H(groupCtr).mainLine];
-    % otherwise use simple plot
+        % otherwise use simple plot
     else
         H2 = plot(signal(groupInd,:),'Color',pooledColors{groupCtr});
         mainLineHandles = [mainLineHandles H2];
@@ -162,7 +163,7 @@ if ~plotControl
 end
 legend(mainLineHandles,pooledLegends,'Location','northeast','Interpreter','none')
 
-% Fig 3: plot signal derivative 
+% Fig 3: plot signal derivative
 for ROICtr = 1:numROI
     set(0,'CurrentFigure',diffFig)
     plot(1:length(dYdT(ROICtr,:)),dYdT(ROICtr,:),'Color',colorMap(ROICtr,:))
@@ -184,9 +185,9 @@ for groupCtr = 1:numel(uniqueGroupIDs)
     % only use shadedErrorBar if there are more than 1 replicate
     if nnz(groupInd)>1
         % plot shaded error bar
-        H(groupCtr) = shadedErrorBar([],dYdT(groupInd,:),{@median,@std},pooledColors{groupCtr},1);
+        H(groupCtr) = shadedErrorBar([],dYdT(groupInd,:),{@median,@std},'lineprops',['-',pooledColors{groupCtr}],'transparent',1);
         mainLineHandles = [mainLineHandles H(groupCtr).mainLine];
-    % otherwise use simple plot
+        % otherwise use simple plot
     else
         H2 = plot(dYdT(groupInd,:),'Color',pooledColors{groupCtr});
         mainLineHandles = [mainLineHandles H2];
@@ -240,7 +241,7 @@ if saveResults
 end
 
 
-%% local functions 
+%% local functions
 
 %% function to extract metadata
 function [directories,expID,numROI,frameInterval,bacWormInfo,groupIDs,metadata] = getMetadata_RealExp(baseDir,expN,groupVars)
@@ -256,7 +257,7 @@ numROI = numel(unique(metadata.ROI(expLogInd)));
 % the IVIS via the batch sequence option
 date = unique(metadata.date_yyyymmdd(expLogInd)); % this date is the experiment date
 subDirName = unique(metadata.subDirName(expLogInd));
-assert(numel(date) == 1, 'More than one experiment dates found for this experiment number');
+%assert(numel(date) == 1, 'More than one experiment dates found for this experiment number');
 if expN == 25
     baseDir = '/Volumes/behavgenom$/Serena/bioluminescence/IVIS/TimeSeries/';
 end
@@ -264,7 +265,7 @@ for subDirCtr = numel(subDirName):-1:1
     directories{subDirCtr} = char(strcat(fullfile(baseDir,num2str(date),char(subDirName{subDirCtr}),filesep)));
 end
 assert(numel(directories)==1|numel(directories)==2,'There should only be 1 or 2 subDirName for this experiment number')
-% generate expID (date+subDirName) as a unique identifier for saving outputs; 
+% generate expID (date+subDirName) as a unique identifier for saving outputs;
 % always use the first subDirName if more than one exists
 dirSplit = strsplit(directories{1},'/');
 expID = [dirSplit{end-2} '_' dirSplit{end-1}];
@@ -272,7 +273,7 @@ expID = [dirSplit{end-2} '_' dirSplit{end-1}];
 frameInterval = unique(metadata.frameInterval_min(expLogInd)); % frames per minute
 assert(numel(frameInterval)==1, 'There should be only one frame interval found for this experiment number. Check metadata.');
 % use the first subDir dataset to extract subsequent info if more than one dataset is available
-if numel(directories)>1 
+if numel(directories)>1
     expLogInd = expLogInd & strcmp(metadata.subDirName, subDirName{1});
 end
 % generate bacteria and worm info cell according to grouping variables,
@@ -299,41 +300,57 @@ groupIDs = metadata.groupID(expLogInd);
 end
 
 %% function to normalise signal against the control (no worm) value
-function signal = normaliseSignalToControl(signal,groupIDs,expN)
+function signal = normaliseSignalToControl(signal,groupIDs,expNs)
 
-% there are two ways of assigning control groupIDs. 1) Assign 0 to the control group if
+% There are two ways of assigning control groupIDs. 1) Assign 0 to the control group if
 % all ROI's are to be normalised to a single control signal. 2) Multiple controls exist
 % and different ROI's are to be normalised against different controls (i.e. drug experiment).
 % In this case assign -1 to group 1 and -2 to group 2, where group 1 ROI's are to be normalised
 % against -1, group 2 ROI's against -2, and so on. No 0 should be contained
 % in the second case.
 
-signalCopy = signal;
-uniqueGroupIDs = unique(abs(groupIDs),'stable');
-% go through each subgroup 
-for groupCtr = 1:numel(uniqueGroupIDs)
-    % identify sub groupID
-    groupID = uniqueGroupIDs(groupCtr);
-    % identify the corresponding control group ID
-    if nnz(groupIDs==0)>0 % first case, a control group of 0 exists and no negative value control groups are present
-        assert(nnz(groupIDs<0)==0, 'Control groups should only contain 0 or negative values. Both are found. Error.')
-        controlGroupID = 0;
-    else % second case, no control group of 0 but there are negative value control groups for their corresponding groups
-        assert(nnz(groupIDs<0)>0, 'Control groups should only contain 0 or negative values. Neither is found. Error.')
-        controlGroupID = -groupID;
+% In the case of multiple replicates of the same experiment, normalisation
+% is done from within each experiment before pooling across experiments
+
+% figure out how many ROI's are in each experimental replicate
+ROIs4Exp = numel(groupIDs)/numel(expNs);
+signalAll = [];
+
+% go through each individual experiment for normalisation
+for expCtr = 1:numel(expNs)
+    endIdx = ROIs4Exp*expCtr;
+    startIdx = ROIs4Exp*expCtr-ROIs4Exp+1;
+    signalThisExp = signal(startIdx:endIdx,:);
+    groupIDThisExp = groupIDs(startIdx:endIdx);
+    uniqueGroupIDs = unique(abs(groupIDThisExp),'stable');
+    
+    % go through each subgroup
+    for groupCtr = 1:numel(uniqueGroupIDs)
+        % identify sub groupID
+        groupID = uniqueGroupIDs(groupCtr);
+        % identify the corresponding control group ID
+        if nnz(groupIDs==0)>0 % first case, a control group of 0 exists and no negative value control groups are present
+            assert(nnz(groupIDs<0)==0, 'Control groups should only contain 0 or negative values. Both are found. Error.')
+            controlGroupID = 0;
+        else % second case, no control group of 0 but there are negative value control groups for their corresponding groups
+            assert(nnz(groupIDs<0)>0, 'Control groups should only contain 0 or negative values. Neither is found. Error.')
+            controlGroupID = -groupID;
+        end
+        % get logical index for this subgroup
+        groupSignalInd = abs(groupIDThisExp)==groupID;
+        % get logical index for control group
+        controlInd = groupIDThisExp==controlGroupID;
+        % average control signals if multiple replicates exist
+        controlSignal = mean(signalThisExp(controlInd,:),1);
+        % replace signal for this subgroup with normalised version of it
+        signalThisExp(groupSignalInd,:) = signalThisExp(groupSignalInd,:)./controlSignal;
     end
-    % get logical index for this subgroup
-    groupSignalInd = abs(groupIDs)==groupID;
-    % get logical index for control group
-    controlInd = groupIDs==controlGroupID;
-    % average control signals if multiple replicates exist
-    controlSignal = mean(signal(controlInd,:),1);
-    % replace signal for this subgroup with normalised version of it
-    signalCopy(groupSignalInd,:) = signal(groupSignalInd,:)./controlSignal;
+    % concatenate signals
+    signalAll = vertcat(signalAll, signalThisExp);
 end
 % rename concatenated signal
-assert(size(signalCopy,1) == numel(groupIDs),'not all signal rows are retained after normalising against respective controls');
-signal = signalCopy;
+assert(size(signalAll,1) == numel(groupIDs),'not all signal rows are retained after normalising against respective controls');
+signal = signalAll;
 end
 
 %% function to normalise signal to the starting value
@@ -352,7 +369,7 @@ signalStart = [signalShiftWindow signal]; % zero pad
 signalEnd = [signal signalShiftWindow]; % zero pad
 signalDiff = signalEnd - signalStart; % take signal difference
 signalDiff = signalDiff(:,[derivativeSmoothWindow+1:end-derivativeSmoothWindow]); % remove the padded signal
-% 
+%
 frameRate = 1/frameInterval;
 dT = derivativeSmoothWindow/frameRate; % time step in minutes
 dYdT = signalDiff/dT; % dYdT to be plotted, in the unit of min^-1
