@@ -1,15 +1,21 @@
 clear
-%close all
+close all
 
 %% script plots bioluminescence signal acquired on the IVIS spectrum and plots signal over time.
 % Signal is measured by Living Image 4.3.1 software (photons/sec/cm^2/sr;),
 
 %% set up
-saveResults = false;
+saveResults = true;
+displayFeedingRates = false; % useful for drug and geno experiment
+if displayFeedingRates
+    hrs2Use = 3;
+end
 baseDir = '/Volumes/behavgenom$/Serena/bioluminescence/IVIS/realExp/';
 % set analysis parameters
-expNs = [12,30,31]; % vector of time series experiment number, i,e. 2 or [1:3].
-% expN [4,5,6]for geno ilux; [10,11,29] for drug ilux; [12,30,31] for drug GFP
+expNs = [43]; % vector of time series experiment number, i,e. 2 or [1:3].
+% expN [4,5,6(,32),(42)]for geno ilux; expN [7,8,34] for geno GFP; [10,11,29] for drug ilux; [12,30,31] for drug GFP
+% expN [14,36,38] for N2 on ilux, [16,18,37,39,44] for DA609 on ilux, [20,40,43] for N2 on GFP, [17,33,41] for
+% DA609 on GFP
 yVarName = 'TotalFlux_p_s_'; %'AvgRadiance_p_s_cm__sr_' or 'TotalFlux_p_s_'. These are matlab friendly named using readtable function.
 groupVars = {'bacDays','bacType','bacInoc','wormGeno','plateDrug'};%,',,'peptoneLevel'};%,'wormNum'}; %'wormNum'
 normaliseSignal = true;
@@ -96,7 +102,6 @@ end
 % calculate signal derivative
 dYdT = takeSignalDerivative(signal,frameInterval,dYdTSmoothWindow);
 
-% calculating time to half max signal
 
 %% plot and format
 
@@ -133,7 +138,7 @@ for groupCtr = 1:numel(uniqueGroupIDs)
     % only use shadedErrorBar if there are more than 1 replicate
     if nnz(groupInd)>1
         % plot shaded error bar
-        H(groupCtr) = shadedErrorBar([],signal(groupInd,:),{@median,@std},'lineprops',['-',pooledColors{groupCtr}],'transparent',1);
+        H(groupCtr) = shadedErrorBar([],signal(groupInd,:),{@median,@std},'lineprops',['-',pooledColors{groupCtr}],'transparent',true);
         mainLineHandles = [mainLineHandles H(groupCtr).mainLine];
         % otherwise use simple plot
     else
@@ -215,18 +220,16 @@ if ~plotControl
 end
 legend(mainLineHandles,pooledLegends,'Location','northeast','Interpreter','none')
 
-%% display median feeding rates over the first 4 hours (this is just before N2 typically runs out of food)
-
-if expN > 3 & expN < 9 | expN >9 & expN <13 % for genotype experiments (4-8) and for drug experiments (10-12)
+%% Display median feeding rates over the first 4 hours (this is just before N2 typically runs out of food)
+if displayFeedingRates
     for groupCtr = 1:numel(pooledLegends)
-        % display feeding rate calculated from derivatives from the first 4
-        % hours of experiments
-        display([pooledLegends{groupCtr} ' feeding rate is ' num2str(median(mainLineHandles(groupCtr).YData(1:4*60/frameInterval)))])
+        % display feeding rate calculated from derivatives from the initial specified hours of experiments
+        display([pooledLegends{groupCtr} ' feeding rate is ' num2str(median(mainLineHandles(groupCtr).YData(1:hrs2Use*60/frameInterval)))])
     end
 end
 
 %% export figures
-figurename = ['results/realExp/' expID];
+figurename = ['/Users/sding/Desktop/forshow/' expID];
 if normaliseSignal
     figurename = [figurename '_normalised'];
 end
@@ -234,9 +237,9 @@ pooledSignalfigurename = [figurename '_pooled'];
 difffigurename = [figurename '_derivative'];
 pooledDifffigurename = [figurename '_derivative_pooled'];
 if saveResults
-    exportfig(signalFig,[figurename '.eps'],exportOptions)
+    %exportfig(signalFig,[figurename '.eps'],exportOptions)
     exportfig(pooledSignalFig,[pooledSignalfigurename '.eps'],exportOptions)
-    exportfig(diffFig,[difffigurename '.eps'],exportOptions)
+    %exportfig(diffFig,[difffigurename '.eps'],exportOptions)
     exportfig(pooledDiffFig,[pooledDifffigurename '.eps'],exportOptions)
 end
 
