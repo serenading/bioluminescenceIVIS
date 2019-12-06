@@ -4,8 +4,8 @@ close all
 %% script combines all the luminescent.tif files from individual frame folders of a time series sequence,
 % rescales using min and max intensity of the sequence, and makes a .mp4 movie
 
-expDir = '/Volumes/behavgenom$/Serena/bioluminescence/IVIS/realExp/20191122/SD20191122211653_SEQ';
-%expDir2 = '/Volumes/behavgenom$/Serena/bioluminescence/IVIS/realExp/20191121/SD20191122063328_SEQ';
+expDir = '/Volumes/behavgenom$/Serena/bioluminescence/IVIS/realExp/20191202/SD20191202191641_SEQ';
+expDir2 = '/Volumes/behavgenom$/Serena/bioluminescence/IVIS/realExp/20191202/SD20191203050519_SEQ';
 
 % get list of frame folders
 framesList = dir([expDir,'/SD2019*']);
@@ -40,9 +40,7 @@ maxval = single(prctile(frameStack(:),99.99)); % use 99.99 percentile (instead o
 display([minval maxval])
 
 % make video (just for visualisation)
-videoName = strsplit(expDir,'/');
-videoName = videoName{end};
-vo = VideoWriter(videoName,'MPEG-4');
+vo = VideoWriter('video','MPEG-4');
 vo.FrameRate = 15;
 open(vo);
 

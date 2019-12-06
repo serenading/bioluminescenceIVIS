@@ -6,7 +6,7 @@ addpath('../AggScreening/auxiliary/')
 dc = readraw; % this is called once to allow reading ARW files as tiff images using matlab imread and imfinfo functions
 
 % set analysis parameters
-foldername = '10191114';
+foldername = '10191128';
 %foldername2 = '11091122';
 binFactor = 8; % 8 for 8x8 binning, 1 for no binning
 

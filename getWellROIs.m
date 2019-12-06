@@ -55,5 +55,11 @@ elseif expDate == 20190320
             wells = [6,9,8;10,12,11;13,16,14;19,21,20;27,25,26;33,32,31];
         end
     end
+elseif expDate == 20191126
+    if strcmp(session,'pm')
+        if dilutionFactor ==2
+            wells = [13,14,15;1,4,6;5,3,2;9,7,8;12,11,10;18,16,17;20,21,19];
+        end
+    end
 end
 end
