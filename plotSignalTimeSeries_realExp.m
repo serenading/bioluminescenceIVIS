@@ -1,18 +1,18 @@
 clear
-close all
+%close all
 
 %% script plots bioluminescence signal acquired on the IVIS spectrum and plots signal over time.
 % Signal is measured by Living Image 4.3.1 software (photons/sec/cm^2/sr;),
 
 %% set up
-saveResults = true;
+saveResults = false;
 displayFeedingRates = false; % useful for drug and geno experiment
 if displayFeedingRates
-    hrs2Use = 3;
+    hrs2Use = 4;
 end
 baseDir = '/Volumes/behavgenom$/Serena/bioluminescence/IVIS/realExp/';
 % set analysis parameters
-expNs = [43]; % vector of time series experiment number, i,e. 2 or [1:3].
+expNs = [13]; % vector of time series experiment number, i,e. 2 or [1:3].
 % expN [4,5,6(,32),(42)]for geno ilux; expN [7,8,34] for geno GFP; [10,11,29] for drug ilux; [12,30,31] for drug GFP
 % expN [14,36,38] for N2 on ilux, [16,18,37,39,44] for DA609 on ilux, [20,40,43] for N2 on GFP, [17,33,41] for
 % DA609 on GFP
