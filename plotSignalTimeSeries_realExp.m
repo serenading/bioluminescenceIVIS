@@ -1,24 +1,26 @@
 clear
-%close all
 
+% close all
 %% script plots bioluminescence signal acquired on the IVIS spectrum and plots signal over time.
 % Signal is measured by Living Image 4.3.1 software (photons/sec/cm^2/sr;),
 
 %% set up
 saveResults = false;
-displayFeedingRates = false; % useful for drug and geno experiment
+displayFeedingRates = true; % useful for drug and geno experiment
 if displayFeedingRates
     hrs2Use = 4;
 end
 baseDir = '/Volumes/behavgenom$/Serena/bioluminescence/IVIS/realExp/';
 % set analysis parameters
-expNs = [13]; % vector of time series experiment number, i,e. 2 or [1:3].
-% expN [4,5,6(,32),(42)]for geno ilux; expN [7,8,34] for geno GFP; [10,11,29] for drug ilux; [12,30,31] for drug GFP
-% expN [14,36,38] for N2 on ilux, [16,18,37,39,44] for DA609 on ilux, [20,40,43] for N2 on GFP, [17,33,41] for
-% DA609 on GFP
+expNs = [12,30,31]; % vector of time series experiment number, i,e. 2 or [1:3].
+% expN [4,5,6(,32),(42),46,52]for geno ilux; expN [7,8,34,48] for geno GFP; 
+% expN [10,11,29] for drug ilux; [12,30,31] for drug GFP;
+% expN [14,36,38,49,50] for N2 on ilux, [16,18,37,39,44,45,51] for DA609 on ilux, 
+% expN [20,40,43] for N2 on GFP, [17,33,41,47] for DA609 on GFP
 yVarName = 'TotalFlux_p_s_'; %'AvgRadiance_p_s_cm__sr_' or 'TotalFlux_p_s_'. These are matlab friendly named using readtable function.
 groupVars = {'bacDays','bacType','bacInoc','wormGeno','plateDrug'};%,',,'peptoneLevel'};%,'wormNum'}; %'wormNum'
 normaliseSignal = true;
+signalSmoothWindow = 5;
 dYdTSmoothWindow = 10;
 pooledColors = {'b','r','k','m'};
 plotControl = true;
@@ -69,6 +71,16 @@ for expCtr = 1:numel(expNs)
         numROICat = numROI;
         expIDCat = ['expN' num2str(expN)];
     else
+        % sometimes experiments are of different lengths. Pad with NaN's in order to concatenate. 
+        % This assumes frame interval is identical across pooled experiments, but doesn't check for it.
+        if size(signalCat,2) ~= size(signal,2) 
+            lengthDiff = size(signalCat,2)-size(signal,2);
+            if lengthDiff>0
+                signal = [signal,NaN(size(signal,1),abs(lengthDiff))];
+            else
+                signalCat = [signalCat, NaN(size(signalCat,1),abs(lengthDiff))];
+            end
+        end
         signalCat = vertcat(signalCat, signal);
         bacWormInfoCat = vertcat(bacWormInfoCat, bacWormInfo);
         groupIDCat = vertcat(groupIDCat, groupIDs);
@@ -84,6 +96,9 @@ for expCtr = 1:numel(expNs)
     if numel(expNs)>1
         expID = expIDCat;
     end
+    
+    % smooth signal
+    signal = smoothdata(signal,2,'movmedian',signalSmoothWindow);
 end
 
 %% process signal
@@ -99,6 +114,9 @@ end
 if expN == 15
     signal = signal(:,1:2:end);
 end
+
+% 
+
 % calculate signal derivative
 dYdT = takeSignalDerivative(signal,frameInterval,dYdTSmoothWindow);
 
@@ -138,7 +156,7 @@ for groupCtr = 1:numel(uniqueGroupIDs)
     % only use shadedErrorBar if there are more than 1 replicate
     if nnz(groupInd)>1
         % plot shaded error bar
-        H(groupCtr) = shadedErrorBar([],signal(groupInd,:),{@median,@std},'lineprops',['-',pooledColors{groupCtr}],'transparent',true);
+        H(groupCtr) = shadedErrorBar([],signal(groupInd,:),{@nanmedian,@nanstd},['-',pooledColors{groupCtr}],1);
         mainLineHandles = [mainLineHandles H(groupCtr).mainLine];
         % otherwise use simple plot
     else
@@ -190,7 +208,7 @@ for groupCtr = 1:numel(uniqueGroupIDs)
     % only use shadedErrorBar if there are more than 1 replicate
     if nnz(groupInd)>1
         % plot shaded error bar
-        H(groupCtr) = shadedErrorBar([],dYdT(groupInd,:),{@median,@std},'lineprops',['-',pooledColors{groupCtr}],'transparent',1);
+        H(groupCtr) = shadedErrorBar([],dYdT(groupInd,:),{@nanmedian,@nanstd},['-',pooledColors{groupCtr}],1);
         mainLineHandles = [mainLineHandles H(groupCtr).mainLine];
         % otherwise use simple plot
     else
@@ -366,13 +384,14 @@ end
 %% function to calculate signal derivative
 function dYdT = takeSignalDerivative(signal,frameInterval,derivativeSmoothWindow)
 
-% get change in signal
+% get change in signal over a time window specied by derivativeSmoothWindow
 signalShiftWindow = zeros(size(signal,1),derivativeSmoothWindow); % generate zero pad
 signalStart = [signalShiftWindow signal]; % zero pad
 signalEnd = [signal signalShiftWindow]; % zero pad
 signalDiff = signalEnd - signalStart; % take signal difference
 signalDiff = signalDiff(:,[derivativeSmoothWindow+1:end-derivativeSmoothWindow]); % remove the padded signal
-%
+
+% convert dT to be in the unit of per minute
 frameRate = 1/frameInterval;
 dT = derivativeSmoothWindow/frameRate; % time step in minutes
 dYdT = signalDiff/dT; % dYdT to be plotted, in the unit of min^-1

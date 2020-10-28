@@ -4,8 +4,8 @@
 % set analysis variables
 numReps = 3; % 3 by default
 dilutionFactors = [10 4 2];
-exposure = 3; % [1 3 6 12]; % use 1
-expDate = 20190312; % yyyymmdd 20190307 20190312 20190320
+exposure = 1; % [1 3 6 12]; % use 1
+expDate = 20190320; % yyyymmdd 20190307 20190312 20190320
 session = 'pm'; % 'am' or 'pm'
 saveResults = false;
 
@@ -35,7 +35,7 @@ pooledFig = figure; hold on
 
 % go through each dilution
 conc = [2^-7 2^-6 2^-5 2^-4 2^-3 2^-2 2^-1 2^0]; % actual concentrations for 2 fold dilution series
-for dilutionCtr = 3%1:numel(dilutionFactors)  % 3 is the 2 fold dilution series
+for dilutionCtr = 3 %1:numel(dilutionFactors)  % 3 is the 2-fold dilution series
     dilutionFactor = dilutionFactors(dilutionCtr);
     wells = getWellROIs(expDate,session,dilutionFactor);
     %% get signal
@@ -57,6 +57,8 @@ for dilutionCtr = 3%1:numel(dilutionFactors)  % 3 is the 2 fold dilution series
     % turn signal back into numInSeries x numReps format (same as how wells
     % are originally specified)
     signal = reshape(signal,[numReps,numInSeries])';
+    % adjust signal based on OD
+    %signal = signal/4.8562;
     % plot each replicate as an individual line
     xVals = 1:numInSeries;
     for repCtr = 1:numReps
@@ -93,8 +95,9 @@ for dilutionCtr = 3%1:numel(dilutionFactors)  % 3 is the 2 fold dilution series
     xticklabels({'2^{-7}','2^{-6}','2^{-5}','2^{-4}','2^{-3}','2^{-2}','2^{-1}', '1'})
 end
 
+% % % 
 % % plot on log-log plot of normalised bioluminescence
-% figure; H = shadedErrorBar(conc,normAll,{@median,@std},{'r-o','markerfacecolor','r'});
+% figure; H = shadedErrorBar(conc(3:8),normAll,{@median,@std},{'r-o','markerfacecolor','r'});
 % ax = gca;
 % set(gca,'yscale','log')
 % set(gca,'xscale','log')
@@ -111,3 +114,17 @@ figurename = ['results/serialDilution/signalLivingImage_' num2str(expDate) sessi
 if saveResults
     exportfig(serialDilutionSignalFig,[figurename '.eps'],exportOptions)
 end
+
+%% calculate Rsquared from linear regression
+load('/Volumes/behavgenom$/Serena/bioluminescence/IVIS/serialDilution/pooledSignal_3rep_pm_1s.mat','signalRaw_pool3rep','signalRaw_pool3rep_norm','conc');
+A = mean(signalRaw_pool3rep_norm,1);
+B = conc;
+b = polyfit(A, B, 1);
+f = polyval(b, A);
+Bbar = mean(B);
+SStot = sum((B - Bbar).^2);
+SSreg = sum((f - Bbar).^2);
+SSres = sum((B - f).^2);
+R2 = 1 - SSres/SStot
+R = corrcoef(A,B);
+Rsq = R(1,2).^2
